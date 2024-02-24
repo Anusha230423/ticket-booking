@@ -33,7 +33,6 @@ public class Seat {
     @Column(name = "section")
     private String section;
     
-    @ManyToOne
-    @JoinColumn(name = "ticket_id")
-    private Ticket ticket;
+    @Column(name = "ticket_id")
+    private Long ticket;
 }

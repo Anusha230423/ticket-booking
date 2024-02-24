@@ -20,6 +20,7 @@ import com.trainTicketBooking.application.core.dto.TicketReceiptDTO;
 import com.trainTicketBooking.application.core.dto.TicketRequestDTO;
 import com.trainTicketBooking.application.core.dto.TicketResponseDTO;
 import com.trainTicketBooking.application.core.dto.UserDTO;
+import com.trainTicketBooking.application.core.dto.UserSeatUpdateDTO;
 import com.trainTicketBooking.application.core.model.Seat;
 import com.trainTicketBooking.application.core.model.Ticket;
 import com.trainTicketBooking.application.core.model.User;
@@ -68,7 +69,7 @@ public class TrainTicketBookingApplicationController {
 					assignSeatSection(trainTicketRepository.findAll()), ticketRequest.getToLocation(), user);
 			trainTicketRepository.save(ticket);
 			for (int i = 0; i < ticketRequest.getTotalNumberOfTickets(); i++) {
-				Seat seat = new Seat(null, user, ticket.getSection(), ticket);
+				Seat seat = new Seat(null, user, ticket.getSection(), ticket.getId());
 				seatRepository.save(seat);
 			}
 			TicketResponseDTO ticketResponse = new TicketResponseDTO(ticket.getId(), ticket.getFromLocation(),
@@ -173,32 +174,23 @@ public class TrainTicketBookingApplicationController {
 	 * @return
 	 */
 	@PostMapping("/updateUserSeat")
-	public ResponseEntity<Object> updateUserSeat(@RequestBody TicketRequestDTO ticketRequest) {
+	public ResponseEntity<Object> updateUserSeat(@RequestBody UserSeatUpdateDTO userSeatUpdateDTO) {
 		try {
-			if ((StringUtils.isEmpty(ticketRequest.getFirstName()) && StringUtils.isEmpty(ticketRequest.getLastName())
-					&& StringUtils.isEmpty(ticketRequest.getEmail()))) {
-				return new ResponseEntity<>("Please enter First Name, Last Name and Email Address",
+			if ((StringUtils.isEmpty(userSeatUpdateDTO.getEmail()) && StringUtils.isEmpty(userSeatUpdateDTO.getSeatNo()))) {
+				return new ResponseEntity<>("Please enter Seat Number and Email Address",
 						HttpStatus.BAD_REQUEST);
 			}
-			double ticketPrice = 5.00 * ticketRequest.getTotalNumberOfTickets();
-			User user = userRepository.findByEmail(ticketRequest.getEmail());
-			if (user == null) {
-				userRepository.save(new User(null, ticketRequest.getFirstName(), ticketRequest.getLastName(),
-						ticketRequest.getEmail()));
+			Seat seat = seatRepository.getById(userSeatUpdateDTO.getSeatNo());
+			switch(seat.getSection()) {
+			case "Section A" -> seat.setSection("Section B");
+			case "Section B" -> seat.setSection("Section A");
 			}
-			Ticket ticket = new Ticket(null, ticketRequest.getFromLocation(), ticketPrice,
-					assignSeatSection(trainTicketRepository.findAll()), ticketRequest.getToLocation(), user);
-			trainTicketRepository.save(ticket);
-			for (int i = 0; i < ticketRequest.getTotalNumberOfTickets(); i++) {
-				Seat seat = new Seat(null, user, ticket.getSection(), ticket);
-				seatRepository.save(seat);
-			}
-			TicketResponseDTO ticketResponse = new TicketResponseDTO(ticket.getId(), ticket.getFromLocation(),
-					ticket.getToLocation(), new UserDTO(user.getFirstName(), user.getLastName(), user.getEmail()));
-			return ResponseEntity.ok(ticketResponse);
+			seatRepository.save(seat);
+			log.info(userSeatUpdateDTO.getSeatNo() + " is updated to the " + seat.getSection());
+			return ResponseEntity.ok(userSeatUpdateDTO.getSeatNo() + " is updated to the " + seat.getSection());
 		} catch (Exception e) {
-			log.error("Error in purchase a ticket and returns receipt in the response ", e.getMessage());
-			return new ResponseEntity<>("Unable to purchase a ticket and returns receipt in the response",
+			log.error("Error in update/modify user's seat ", e.getMessage());
+			return new ResponseEntity<>("Unable to update/modify user's seat",
 					HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
