@@ -1,7 +1,9 @@
 package com.trainTicketBooking.application.core.controller;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.trainTicketBooking.application.core.dto.TicketReceiptDTO;
 import com.trainTicketBooking.application.core.dto.TicketRequestDTO;
 import com.trainTicketBooking.application.core.dto.TicketResponseDTO;
+import com.trainTicketBooking.application.core.dto.TicketUpdateRequestDTO;
 import com.trainTicketBooking.application.core.dto.UserDTO;
 import com.trainTicketBooking.application.core.dto.UserSeatUpdateDTO;
 import com.trainTicketBooking.application.core.model.Seat;
@@ -197,6 +200,35 @@ public class TrainTicketBookingApplicationController {
 
 	public String assignSeatSection(List<Ticket> tickets) {
 		return (tickets.size() % 2 == 0) ? "Section A" : "Section B";
+	}
+	
+	@PostMapping("/update")
+	public ResponseEntity<Object> updateTrainTicket(@RequestBody TicketUpdateRequestDTO ticketUpdateRequestDTO) {
+		try {
+			if ((StringUtils.isEmpty(ticketUpdateRequestDTO.getTicketNumber()) && StringUtils.isEmpty(ticketUpdateRequestDTO.getDiscountCode()))) {
+				return new ResponseEntity<>("Please enter ticket number and discount code",
+						HttpStatus.BAD_REQUEST);
+			}
+			Map<String, Integer> availableDiscountCodes = new HashMap<>();
+			availableDiscountCodes.put("Discount1", 1);
+			availableDiscountCodes.put("Discount2", 3);
+			availableDiscountCodes.put("Discount3", 10);
+			boolean codePresent = availableDiscountCodes.containsKey(ticketUpdateRequestDTO.getDiscountCode());
+			if(!codePresent) {
+				return new ResponseEntity<>("Enter the correct discount code",
+						HttpStatus.BAD_REQUEST);
+			}
+			Ticket ticket = trainTicketRepository.getById(ticketUpdateRequestDTO.getTicketNumber());
+			double price = ticket.getPrice();
+			price -= availableDiscountCodes.get(ticketUpdateRequestDTO.getDiscountCode());
+			ticket.setPrice(price);
+			trainTicketRepository.save(ticket);
+			return ResponseEntity.ok("Ticket is updated!");
+		} catch (Exception e) {
+			log.error("Error in purchase a ticket and returns receipt in the response ", e.getMessage());
+			return new ResponseEntity<>("Unable to purchase a ticket and returns receipt in the response",
+					HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 	}
 
 }
