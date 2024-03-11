@@ -220,13 +220,16 @@ public class TrainTicketBookingApplicationController {
 			}
 			Ticket ticket = trainTicketRepository.getById(ticketUpdateRequestDTO.getTicketNumber());
 			String discountAdded = ticket.getDiscountAdded() != null ? ticket.getDiscountAdded() : "";
-			if(discountAdded.isEmpty() || !discountAdded.contains(ticketUpdateRequestDTO.getDiscountCode())) {
-				double price = ticket.getPrice();
+			double price = ticket.getPrice();
+			if((discountAdded.isEmpty() || !discountAdded.contains(ticketUpdateRequestDTO.getDiscountCode())) && price > 0.0) {
 				price -= availableDiscountCodes.get(ticketUpdateRequestDTO.getDiscountCode());
-				ticket.setPrice(price);
+				ticket.setPrice(price < 0.0 ? 0.0 : price);
 				ticket.setDiscountAdded(discountAdded.concat(ticketUpdateRequestDTO.getDiscountCode()));
 				trainTicketRepository.save(ticket);
 				return ResponseEntity.ok("Ticket is updated!");
+			} else if(price <= 0.0) {
+				return new ResponseEntity<>("Discount code cannot be applied from the total price is 0.0!",
+						HttpStatus.BAD_REQUEST);
 			} else {
 				return new ResponseEntity<>("Discount code: "+ticketUpdateRequestDTO.getDiscountCode()+" is already applied!",
 						HttpStatus.BAD_REQUEST);
