@@ -69,7 +69,7 @@ public class TrainTicketBookingApplicationController {
 						ticketRequest.getEmail()));
 			}
 			Ticket ticket = new Ticket(null, ticketRequest.getFromLocation(), ticketPrice,
-					assignSeatSection(trainTicketRepository.findAll()), ticketRequest.getToLocation(), user);
+					assignSeatSection(trainTicketRepository.findAll()), ticketRequest.getToLocation(), user, "");
 			trainTicketRepository.save(ticket);
 			for (int i = 0; i < ticketRequest.getTotalNumberOfTickets(); i++) {
 				Seat seat = new Seat(null, user, ticket.getSection(), ticket.getId());
@@ -219,11 +219,18 @@ public class TrainTicketBookingApplicationController {
 						HttpStatus.BAD_REQUEST);
 			}
 			Ticket ticket = trainTicketRepository.getById(ticketUpdateRequestDTO.getTicketNumber());
-			double price = ticket.getPrice();
-			price -= availableDiscountCodes.get(ticketUpdateRequestDTO.getDiscountCode());
-			ticket.setPrice(price);
-			trainTicketRepository.save(ticket);
-			return ResponseEntity.ok("Ticket is updated!");
+			String discountAdded = ticket.getDiscountAdded() != null ? ticket.getDiscountAdded() : "";
+			if(discountAdded.isEmpty() || !discountAdded.contains(ticketUpdateRequestDTO.getDiscountCode())) {
+				double price = ticket.getPrice();
+				price -= availableDiscountCodes.get(ticketUpdateRequestDTO.getDiscountCode());
+				ticket.setPrice(price);
+				ticket.setDiscountAdded(discountAdded.concat(ticketUpdateRequestDTO.getDiscountCode()));
+				trainTicketRepository.save(ticket);
+				return ResponseEntity.ok("Ticket is updated!");
+			} else {
+				return new ResponseEntity<>("Discount code: "+ticketUpdateRequestDTO.getDiscountCode()+" is already applied!",
+						HttpStatus.BAD_REQUEST);
+			}
 		} catch (Exception e) {
 			log.error("Error in purchase a ticket and returns receipt in the response ", e.getMessage());
 			return new ResponseEntity<>("Unable to purchase a ticket and returns receipt in the response",

@@ -42,4 +42,7 @@ public class Ticket {
 	@JoinColumn(name = "user_id")
 	private User user;
 	
+	@Column(name="discount_added")
+	private String discountAdded;
+	
 }
